@@ -17,6 +17,7 @@ router.post('/register', validateWithZod(registerSchema), authControllers.regist
 router.post('/login', validateWithZod(loginSchema), authControllers.login)
 
 
+router.get('/current-user', authControllers.currentUser)
 
 
 
@@ -24,6 +25,5 @@ router.post('/login', validateWithZod(loginSchema), authControllers.login)
 
 
 
-
-
+// export
 module.exports = router
