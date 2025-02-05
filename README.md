@@ -233,3 +233,73 @@ git commit -m "message"
 git push
 
 ```
+
+
+
+
+## Step 8 Validate with zod
+
+/middlewares/validators.js
+
+
+```js
+
+const { z } = require("zod")
+// npm i zod
+// TEST validator
+exports.registerSchema = z.object({
+
+    email: z.string().email(),
+    firstname: z.string().min(3, "Firstname ต้องมากกว่า 3 อักขระ"),
+    lastname: z.string().min(3, "Lastname ต้องมากกว่า 3 อักขระ"),
+    password: z.string().min(6, "Password ต้องมากกว่า 6 อักขระ"),
+    confirmPassword: z.string().min(6, "ConfirmPassword ต้องมากกว่า 6 อักขระ")
+
+
+
+}).refine((data) => data.password === data.confirmPassword, {
+
+    message: "Confirm Password ไม่ตรงกัน",
+    path: ["confirmPassword"]
+
+})
+
+
+exports.loginSchema = z.object({
+
+    email: z.string().email(),
+    password: z.string().min(6, "Password ต้องมากกว่า 6 อักขระ"),
+
+})
+
+
+
+
+exports.validateWithZod = (schema) => (req, res, next) => {
+    try {
+        console.log("Hello middleware");
+        schema.parse(req.body)
+        next();
+
+    } catch (error) {
+        const errMsg = error.errors.map((item) => item.message)
+        const errTxt = errMsg.join(",")
+        const mergeError = new Error(errTxt)
+        next(mergeError)
+    }
+
+
+}
+
+```
+
+
+when update code in Github
+
+```bash
+
+git add .
+git commit -m "message"
+git push
+
+```
