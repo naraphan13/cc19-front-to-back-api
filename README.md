@@ -531,3 +531,308 @@ exports.login = async (req, res, next) => {
 }
 
 ```
+
+
+
+
+## Step 11 Current-user
+/controllers/auth-controllers.js
+
+```js
+
+const { Role } = require("@prisma/client");
+const prisma = require("../configs/prisma");
+const createError = require("../utils/createError");
+const bcrypt = require("bcryptjs")
+const jwt = require("jsonwebtoken")
+
+
+exports.register = async (req, res, next) => {
+
+    try {
+
+        //code
+        //Step 1 req.body
+        const { email, firstname, lastname, password, confirmPassword } = req.body
+
+        //Step 2 validate
+
+        //Step 3 Check already
+        const checkEmail = await prisma.profile.findFirst({
+            where: {
+                email: email,
+            }
+        })
+        console.log(checkEmail);
+        if (checkEmail) {
+
+            return createError(400, "Email is already exits!!!")
+
+        }
+
+        //Step 4 Encrypt bcrypt
+        const salt = bcrypt.genSaltSync(10)
+        const hashedPassword = bcrypt.hashSync(password, salt)
+
+
+        //Step 5 Insert to DB
+
+        const profile = await prisma.profile.create({
+            data: {
+                email: email,
+                firstname: firstname,
+                lastname: lastname,
+                password: hashedPassword
+            },
+        });
+        //Step 6 Response
+
+        res.json({ message: "Register Success" })
+    } catch (error) {
+        console.log("Step 2 Catch");
+
+        next(error)
+    }
+
+
+}
+
+
+exports.login = async (req, res, next) => {
+
+    try {
+        // Step 1 req.body
+        const { email, password } = req.body
+
+        //Step2 check email and password
+        const profile = await prisma.profile.findFirst({
+            where: {
+                email: email
+            }
+        })
+        console.log(profile);
+
+        if (!profile) {
+            return createError(400, "Email,Password is invalid!!!")
+
+        }
+        const isMatch = bcrypt.compareSync(password, profile.password)
+
+        if (!isMatch) {
+            return createError(400, "Email,Password is invalid!!!")
+
+        }
+
+        //Step 3 Generate token
+        const payload = {
+            id: profile.id,
+            email: profile.email,
+            firstname: profile.firstname,
+            lastname: profile.lastname,
+            Role: profile.role
+        }
+
+        const token = jwt.sign(payload, process.env.SECRET, {
+
+            expiresIn: "1d",
+        })
+
+        console.log(token);
+        //Step 4 Response
+
+        res.json({
+            message: "Login Success",
+            payload: payload,
+            token, token,
+        })
+
+    } catch (error) {
+        next(error)
+
+
+    }
+
+}
+
+
+exports.currentUser = async (req,res,next)=>{
+
+
+    try {
+        res.json({message:"Hello, current user"})
+    } catch (error) {
+        next(error)
+    }
+
+}
+
+
+```
+
+
+/routes/auth-route.js
+```js
+
+const express = require("express")
+const router = express.Router()
+const authControllers = require("../controllers/auth-controller")
+const { validateWithZod, registerSchema, loginSchema } = require("../middlewares/validators")
+
+
+
+
+
+
+
+
+
+
+//@ENDPOINT http://localhost:8000/api/register
+router.post('/register', validateWithZod(registerSchema), authControllers.register)
+router.post('/login', validateWithZod(loginSchema), authControllers.login)
+
+
+router.get('/current-user', authControllers.currentUser)
+
+
+
+
+
+
+
+// export
+module.exports = router
+
+```
+
+## Step 12 User Controller & Routes
+/controllers/user-controller.js
+```js
+
+//1.list all users
+// 2.update Role
+// 3.Delete User
+
+
+
+exports.listUsers = (req, res, next) => {
+
+    // code
+    try {
+        res.json({ message: "Hello, List users" })
+    } catch (error) {
+        next(error)
+    }
+
+
+}
+
+
+
+
+exports.updateRole = async (req, res, next) => {
+
+    try {
+        res.json({ message: "Hello,Update Role" })
+    } catch (error) {
+        next(error)
+    }
+
+}
+
+
+
+exports.deleteUser = async (req, res, next)=>{
+
+
+    try {
+        res.json({ message: "Hello, Delete User" })
+    } catch (error) {
+        next(error)
+    }
+
+
+
+}
+
+```
+
+
+/routes/user-route.js
+```js
+
+const express = require("express")
+const router = express.Router()
+
+
+// Import controller
+const userController = require("../controllers/user-controller")
+
+
+
+
+
+
+router.get("/users",userController.listUsers)
+router.patch("/user/update-role",userController.updateRole)
+router.delete("/user/:id",userController.deleteUser)
+
+
+
+
+
+module.exports = router
+
+```
+
+
+update index.js
+
+```js
+
+const express = require("express")
+const cors = require("cors")
+const morgan = require("morgan")
+const handleErrors = require("./middlewares/error")
+
+//Routing
+const authRouter = require("./routes/auth-route")
+const userRouter = require("./routes/user-route")
+const app = express()
+
+
+
+
+// Middlewares
+
+app.use(cors())                     //Allows cross domain
+app.use(morgan("dev"))             // Show log terminal
+app.use(express.json())            //For read json
+
+
+
+
+
+
+
+//Routing
+
+
+app.use("/api",authRouter)
+app.use("/api",userRouter)
+
+
+
+
+//Handle errors
+app.use(handleErrors)
+
+
+// Start Server
+
+const PORT = 8000
+
+app.listen(PORT,()=>{console.log(`Server is running on port ${PORT}`);
+})
+
+```
